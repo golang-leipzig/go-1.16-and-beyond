@@ -1,0 +1,11 @@
+body {
+	font-family: sans-serif;
+	width: 50%;
+	margin: 0 auto;
+}
+
+h1 {
+	font-size: 3em;
+	text-align: center;
+	text-transform: uppercase;
+}
