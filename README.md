@@ -3,7 +3,39 @@
 Our 16th Meetup at the 16th of February with a quick tour on Go 1.16 :blush: .
 We will also have an outlook on the Go generics proposal.
 
-## `embed`
+Go 1.16 is expected to be released this Februrary! :tada: :fireworks:
+
+## From the [preliminary release notes](https://tip.golang.org/doc/go1.16#ioutil)
+
+- :warning: [`io/ioutil` gets deprecated](https://tip.golang.org/doc/go1.16#ioutil)
+  - package remains and will continue to work like before but new code should use functions from `io` and `os` instead
+  - `ioutil` functions will become wrappers around `io` and `os`, example [`ioutil.ReadFile`](https://tip.golang.org/src/io/ioutil/ioutil.go?s=1167:1213#L26)
+- :warning: 32-bit iOS and macOS support is dropped
+- :tada: Go adds support for the 64-bit macOS ARM architecture (aka Apple Silicon) with `GOOS=darwin, GOARCH=arm64`
+  - ~~crypto will be slower on this architecture since the optimized assembly code is still missing~~ There are arm64 assembly implementations: https://tip.golang.org/src/crypto/aes/cipher_asm.go and https://tip.golang.org/src/crypto/aes/asm_arm64.s
+
+#### [Modules](https://tip.golang.org/doc/go1.16#modules)
+
+- :warning: `GO111MODULE=on` is now the default, i.e. go tools work in  _go modules_ mode by default
+- `go build` and `go test` do not modify your `go.mod, go.sum` anymore
+  - those two commands report if an module or checksum needs to be added or updated
+  - use `go get` or `go mod tidy` to do tha
+
+#### Other
+
+- :tada: [`runtime/metrics`](https://tip.golang.org/pkg/runtime/metrics/) is a new package that provides a stable interface for accessing runtime metrics
+  - generalizes [`runtime.ReadMemStats`](https://tip.golang.org/pkg/runtime/#ReadMemStats) and others
+- [`GODEBUG=inittrace=1`](https://tip.golang.org/pkg/runtime/#hdr-Environment_Variables) prints execution time and memory allocation for all `init` calls, e.g. to analyze startup time regressions
+- See [State of Go @ FOSDEM 2021](https://www.youtube.com/watch?v=pNd_BM0Tg4E) for another overview of the additions and changes coming with this release
+- :racing_car: the [linker is faster](https://tip.golang.org/doc/go1.16#linker), requires less memory and binaries are getting smaller as a result of more aggressive symbol pruning¹
+- ¹ my naïve explanation of symbol pruning:
+  - a symbol contains metadata about the addresses of its variables and functions ([source](http://nickdesaulniers.github.io/blog/2016/08/13/object-files-and-symbols/))
+  - :bulb: you can show the symbols (symbol-table) of a binary using `nm <binary-file>` (running `strip <binary-file>` will remove them all)
+  - _symbol pruning_ refers to the removal of symbols that are unused, e.g. uncalled functions from imported libraries
+
+---
+
+## A deeper look on the new `embed` package
 
 - [initial pull request](https://go-review.googlesource.com/c/go/+/243942) and [go command support](https://go-review.googlesource.com/c/go/+/243945)
 - [embed.go](https://tip.golang.org/src/embed/embed.go) is only 423 lines including comments and blank lines
@@ -23,8 +55,39 @@ We will also have an outlook on the Go generics proposal.
 - run example: `source .env && go run ./cmd/embed :12345`
 - calling `strings` on the binary shows that content is embedded as plain-text
 
+## `os` and `io/fs`
+
+- with `os.ReadDir`/`fs.ReadDir` we get to new functions for listing directory contents
+  - those functions are a lot more efficient than `ioutil.ReadDir` because they do not require to call `stat` for each directory entry
+  - for details see [Ben Hoyts' article](https://benhoyt.com/writings/go-readdir/)
+  - fun fact, those functions are inspired by [Python's `os.scandir`](https://docs.python.org/3/library/os.html#os.scandir)
+  - to get the performance benefit of `ReadDir` when walking directory trees you need to use [`filepath.WalkDir`](https://tip.golang.org/pkg/path/filepath/#WalkDir) instead of `filepath.Walk`, `filepath.WalkDir` passes `fs.DirEntry` instead of `os.FileInfo` into the `WalkFn`
+
+```go
+type FS interface {
+    Open(name string) (File, error)
+}
+```
+
+- [`io.FS`](https://tip.golang.org/pkg/io/fs/#FS) filesystem abstraction interface
+  - prior art is [`afero`](https://github.com/spf13/afero) but it has a [much larger interface](https://pkg.go.dev/github.com/spf13/afero#Fs) (and functionality, e.g. supports writes)
+  - `embed.FS` implements this so you can easily work with embedded directory trees
+  - pretty useful for tests, e.g. to prevent side effects → [`testing/fstest.MapFS`](https://tip.golang.org/pkg/testing/fstest/#MapFS) is an in-memory file system
+  - accept `fs.FS` and make your API filesystem agnostic, i.e. work transparently with a local directory, s3 block storage, remote file system etc.
+  - :bulb: you can easily test your custom file systems by passing them into [`fstest.TestFS`](https://tip.golang.org/pkg/testing/fstest/#TestFS)
+
+```go
+type DeleteFS interface {
+  FS
+
+  Delete(name string) error
+}
+```
+
+- if you need more functionality use interface composition to build a larger interface, take [ReadDirFS](https://tip.golang.org/pkg/io/fs/#ReadDirFS) or [`StatFS`](https://tip.golang.org/pkg/io/fs/#ReadDirFS) as an example
+
+
 ### Open Questions
 
-- io/fs while being read-only, how to easily add write interfaces?
 - generics
-- quick note about the "deprectation" of io/ioutil
+- Go 1.16 expected to be released in February :tada:
