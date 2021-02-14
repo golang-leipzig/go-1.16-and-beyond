@@ -3,6 +3,8 @@
 Our 16th Meetup at the 16th of February with a quick tour on Go 1.16 :blush: .
 We will also have an outlook on the Go generics proposal.
 
+<video controls loop autoplay><source src="golang-leipzig-stickers.mp4" type="video/mp4"></video>
+
 Go 1.16 is expected to be released this Februrary! :tada: :fireworks:
 
 ## From the [preliminary release notes](https://tip.golang.org/doc/go1.16#ioutil)
