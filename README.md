@@ -86,8 +86,47 @@ type DeleteFS interface {
 
 - if you need more functionality use interface composition to build a larger interface, take [ReadDirFS](https://tip.golang.org/pkg/io/fs/#ReadDirFS) or [`StatFS`](https://tip.golang.org/pkg/io/fs/#ReadDirFS) as an example
 
+## Generics
 
-### Open Questions
+[The proposal got accepted](https://github.com/golang/go/issues/43651#issuecomment-776944155) :tada: 
 
-- generics
-- Go 1.16 expected to be released in February :tada:
+- depending on your personal opinion this might be good or bad news
+- we will not see generics in a 1.x release
+- [Ardan Labs three part blog article series about generics](https://www.ardanlabs.com/blog/2020/07/generics-01-basic-syntax.html)
+- (since some time already) there are two ways to try out generics:
+  1. compile the `go2go` translation tool from the `dev.go2go` branch of the [Go repo](https://go.googlesource.com/go) ([instructions](https://go.googlesource.com/go/+/refs/heads/dev.go2go/README.go2go.md))
+  2. use the [go2go playgound](https://go2goplay.golang.org/)
+
+```go
+func print[T any](value T) {
+	fmt.Printf("type=%T\tvalue=%#v\n", value, value)
+}
+
+print([]int{1, 2, 3, 4})
+print("Hello, Golang Leipzig!")
+```
+
+[playground](https://go2goplay.golang.org/p/cGQWVpzboRI)
+
+- `[T any]` is the type parameter list
+  - `any` is a type [_constraint_](https://go.googlesource.com/proposal/+/refs/heads/master/design/go2draft-type-parameters.md#constraints) (limiting the set of allowed types that can be used for `T`)
+  - `any` means "unconstrained" or allow any type for `T`
+
+```go
+type Number interface {
+	type int, float64
+}
+
+func sum[T, S Number](a T, b S) S {
+	return S(a) + b
+}
+
+sum(1, 3.1415)
+```
+
+[playground](https://go2goplay.golang.org/p/JWm9mDpsvVf)
+
+- a type parameter list can contain multiple type identifiers
+- ... we will talk likely have a separate talk that covers Generics in depth
+
+## Questions :question:
